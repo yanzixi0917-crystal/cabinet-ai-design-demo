@@ -64,7 +64,11 @@ const scenarios = {
   }
 };
 
-let state = { scenario: "water", environment: "户内", selectedModel: "GGD", view: "front", analyzed: false, confirmed: false };
+let state = {
+  scenario: "water", environment: "户内", selectedModel: "GGD", view: "front",
+  analyzed: false, confirmed: false, modelChosen: false, cadDark: false, ruleBlocked: false,
+  resolutions: {}, currentIssues: []
+};
 let sourceVisible = false;
 
 const elements = {
@@ -72,11 +76,17 @@ const elements = {
   voltage: $("#voltage"), current: $("#current"), circuits: $("#circuits"), ip: $("#ipLevel"),
   analyze: $("#analyzeButton"), empty: $("#emptyState"), analysis: $("#analysisContent"), runState: $("#runState"),
   solution: $("#solution"), drawing: $("#drawing"), paramList: $("#paramList"), issues: $("#issues"),
-  modelCards: $("#modelCards"), drawingSvg: $("#cabinetDrawing"), toast: $("#toast")
+  modelCards: $("#modelCards"), drawingSvg: $("#cabinetDrawing"), toast: $("#toast"),
+  rulePanel: $("#rulePanel"), ruleList: $("#ruleList"), ruleScore: $("#ruleScore"),
+  ruleAlert: $("#ruleAlert"), ruleAlertText: $("#ruleAlertText")
 };
 
 function setScenario(key) {
-  state = { ...state, scenario: key, environment: scenarios[key].environment, selectedModel: "GGD", analyzed: false, confirmed: false };
+  state = {
+    ...state, scenario: key, environment: scenarios[key].environment, selectedModel: "GGD",
+    analyzed: false, confirmed: false, modelChosen: false, cadDark: false, ruleBlocked: false,
+    resolutions: {}, currentIssues: []
+  };
   const s = scenarios[key];
   elements.projectName.textContent = s.name;
   elements.fileName.textContent = s.file;
@@ -95,8 +105,14 @@ function setScenario(key) {
   elements.runState.innerHTML = "<span></span> 等待解析";
   elements.solution.classList.add("locked");
   elements.drawing.classList.add("locked");
+  elements.ruleAlert.classList.add("hidden");
+  $("#drawingSheet").classList.remove("cad-dark");
+  $("#cadModeToggle").classList.remove("active");
+  $("#cadModeToggle").lastChild.textContent = " CAD 黑底";
+  resetParseProgress();
   updatePipeline(0);
   updateDrawing();
+  renderRules();
 }
 
 function updatePipeline(activeIndex) {
@@ -104,6 +120,15 @@ function updatePipeline(activeIndex) {
     step.classList.toggle("active", index === activeIndex);
     step.classList.toggle("done", index < activeIndex);
   });
+}
+
+function getCurrentIssues() {
+  const s = scenarios[state.scenario];
+  const issues = [...s.issues];
+  if (state.environment === "户外" && elements.ip.value.toUpperCase() === "IP31" && state.scenario !== "outdoor") {
+    issues.unshift(["环境与防护参数需要复核", "当前选择为户外环境，但防护字段仍为IP31。系统仅提示冲突，不自动修改工程参数。", "规则冲突 · ENV-004"]);
+  }
+  return issues.map(([title, detail, tag]) => ({ title, detail, tag, key: `${state.scenario}:${tag}` }));
 }
 
 function renderAnalysis() {
@@ -119,15 +144,73 @@ function renderAnalysis() {
     </div>`).join("");
   elements.paramList.classList.toggle("show-sources", sourceVisible);
 
-  let issues = [...s.issues];
-  if (state.environment === "户外" && elements.ip.value.toUpperCase() === "IP31" && state.scenario !== "outdoor") {
-    issues.unshift(["环境与防护参数需要复核", "当前选择为户外环境，但防护字段仍为IP31。系统仅提示冲突，不自动修改工程参数。", "规则冲突 · ENV-004"]);
-  }
-  elements.issues.innerHTML = issues.map(([title, detail, tag]) => `
-    <div class="issue"><span class="issue-mark">!</span><p><strong>${title}</strong><small>${detail}</small><button data-resolve>${tag}</button></p></div>`).join("");
-  $("#issueCount").innerHTML = `${issues.length}<small>项</small>`;
-  $(".count-badge").textContent = issues.length;
-  $$('[data-resolve]').forEach(btn => btn.addEventListener("click", () => toast("此处将接入工程师确认与批注流程")));
+  state.currentIssues = getCurrentIssues();
+  const unresolved = state.currentIssues.filter(issue => !state.resolutions[issue.key]);
+  elements.issues.innerHTML = state.currentIssues.map((issue, index) => {
+    const resolution = state.resolutions[issue.key];
+    return `
+      <div class="issue ${resolution ? "resolved" : ""}">
+        <span class="issue-mark">${resolution ? "✓" : "!"}</span>
+        <p><strong>${issue.title}</strong><small>${issue.detail}</small>
+          ${resolution ? `<span class="resolution-result">处理结果：${resolution.note}</span>` : ""}
+          <button data-resolve="${index}">${resolution ? "修改处理结果" : "处理待确认项"} · ${issue.tag}</button>
+        </p>
+      </div>`;
+  }).join("");
+  $("#issueCount").innerHTML = `${unresolved.length}<small>项</small>`;
+  $(".count-badge").textContent = unresolved.length;
+  $(".count-badge").classList.toggle("all-clear", unresolved.length === 0);
+  $$("[data-resolve]").forEach(btn => btn.addEventListener("click", () => openResolution(Number(btn.dataset.resolve))));
+}
+
+function openResolution(index) {
+  const issue = state.currentIssues[index];
+  if (!issue) return;
+  const resolution = state.resolutions[issue.key];
+  $("#resolutionIssueIndex").value = index;
+  $("#resolutionTitle").textContent = issue.title;
+  $("#resolutionDescription").textContent = issue.detail;
+  $("#resolutionMethod").value = resolution?.method || "manual";
+  $("#resolutionValue").value = resolution?.note || "";
+  $("#resolutionDialog").showModal();
+}
+
+function saveResolution() {
+  const index = Number($("#resolutionIssueIndex").value);
+  const issue = state.currentIssues[index];
+  if (!issue) return;
+  const method = $("#resolutionMethod").value;
+  const value = $("#resolutionValue").value.trim();
+  const labels = {
+    manual: "已人工补充并确认",
+    temporary: "已采用项目暂定值 仅演示",
+    defer: "已转交工程师稍后确认"
+  };
+  state.resolutions[issue.key] = { method, note: value || labels[method] };
+  $("#resolutionDialog").close();
+  renderAnalysis();
+  renderRules();
+  const remaining = state.currentIssues.filter(item => !state.resolutions[item.key]).length;
+  toast(remaining ? `处理结果已记录，还剩 ${remaining} 项待确认` : "待确认项已全部处理，可进入方案设计");
+}
+
+function resetParseProgress() {
+  $("#parseProgressBar").style.width = "0%";
+  $$("[data-parse-step]").forEach(item => {
+    item.classList.remove("active", "done");
+    item.querySelector("i").textContent = "等待";
+  });
+}
+
+function updateParseProgress(activeStep) {
+  const steps = $$("[data-parse-step]");
+  steps.forEach((item, index) => {
+    item.classList.toggle("done", index < activeStep || activeStep >= steps.length);
+    item.classList.toggle("active", index === activeStep && activeStep < steps.length);
+    item.querySelector("i").textContent = index < activeStep || activeStep >= steps.length ? "完成" : index === activeStep ? "处理中" : "等待";
+  });
+  const percent = activeStep >= steps.length ? 100 : Math.round(((activeStep + .45) / steps.length) * 100);
+  $("#parseProgressBar").style.width = `${percent}%`;
 }
 
 function startAnalysis() {
@@ -138,14 +221,19 @@ function startAnalysis() {
   elements.runState.innerHTML = "<span></span> OCR与语义解析中";
   updatePipeline(1);
 
-  const states = ["正在识别文档结构", "正在抽取工程参数", "正在执行冲突检查"];
+  resetParseProgress();
+  updateParseProgress(0);
+  const states = ["正在预处理工程资料", "正在进行OCR文字识别", "正在抽取工程参数", "正在执行演示规则检查"];
   let index = 0;
   const interval = setInterval(() => {
-    elements.runState.innerHTML = `<span></span> ${states[index++] || states[2]}`;
-  }, 650);
+    index = Math.min(index + 1, states.length - 1);
+    updateParseProgress(index);
+    elements.runState.innerHTML = `<span></span> ${states[index]}`;
+  }, 520);
 
   setTimeout(() => {
     clearInterval(interval);
+    updateParseProgress(states.length);
     state.analyzed = true;
     renderAnalysis();
     elements.empty.classList.add("hidden");
@@ -165,6 +253,63 @@ const models = [
   { name: "MNS", label: "模块化低压开关柜", score: 64, bullets: ["模块扩展能力强", "当前需求可能过配", "成本参数待补充"] }
 ];
 
+function evaluateRules() {
+  const current = Number(elements.current.value) || 0;
+  const circuits = Number(elements.circuits.value) || 0;
+  const width = Number($("#cabinetWidth").value) || 0;
+  const highCurrentBlock = current >= 3000 && width < 1200;
+  const circuitBlock = circuits > 16 && width < 1000;
+  const unresolved = state.currentIssues.filter(issue => !state.resolutions[issue.key]).length;
+  const rules = [
+    {
+      status: highCurrentBlock ? "fail" : "pass",
+      text: highCurrentBlock ? `当前 ${current}A 与 ${width}mm 柜宽组合超过演示配置范围` : "额定电流与演示柜宽配置匹配",
+      code: "R-DEMO-008"
+    },
+    {
+      status: circuitBlock ? "fail" : "pass",
+      text: circuitBlock ? `${circuits} 路回路与 ${width}mm 柜宽组合超过演示配置范围` : "回路数量与柜体空间演示约束匹配",
+      code: "R-DEMO-012"
+    },
+    { status: "pass", text: "额定参数已进入候选柜型匹配范围", code: "R-ELEC-012" },
+    {
+      status: unresolved ? "pending" : "pass",
+      text: unresolved ? `仍有 ${unresolved} 项需要工程师确认` : "需求待确认项已完成人工处理",
+      code: "R-HITL-001"
+    }
+  ];
+  return { rules, blocked: highCurrentBlock || circuitBlock, highCurrentBlock, circuitBlock, unresolved };
+}
+
+function renderRules() {
+  const result = evaluateRules();
+  state.ruleBlocked = result.blocked;
+  const failCount = result.rules.filter(rule => rule.status === "fail").length;
+  const pendingCount = result.rules.filter(rule => rule.status === "pending").length;
+  const score = Math.max(0, 20 - failCount * 2 - pendingCount);
+  elements.ruleScore.innerHTML = `${score}<small>/20</small>`;
+  const progress = $(".rule-ring .progress");
+  if (progress) progress.style.strokeDashoffset = String(302 - 302 * score / 20);
+  elements.rulePanel.classList.toggle("blocked", result.blocked);
+  elements.ruleList.innerHTML = result.rules.map(rule => `
+    <li><span class="${rule.status}">${rule.status === "pass" ? "✓" : "!"}</span><p>${rule.text}<small>${rule.code} · 演示规则</small></p></li>`).join("");
+  elements.modelCards.classList.toggle("models-disabled", result.blocked);
+
+  if (state.confirmed && result.blocked) {
+    const messages = [];
+    if (result.highCurrentBlock) messages.push("高电流与当前柜宽组合被演示规则拦截");
+    if (result.circuitBlock) messages.push("回路数量与当前柜宽组合被演示规则拦截");
+    elements.ruleAlertText.textContent = `${messages.join("；")}。该判断仅用于展示规则引擎交互，必须由电气工程师复核。`;
+    elements.ruleAlert.classList.remove("hidden");
+    elements.drawing.classList.add("locked");
+    $("#drawing .lock-overlay span").textContent = "演示规则未通过，暂不生成图纸";
+  } else {
+    elements.ruleAlert.classList.add("hidden");
+    if (state.modelChosen) elements.drawing.classList.remove("locked");
+    $("#drawing .lock-overlay span").textContent = "选择方案后解锁";
+  }
+}
+
 function renderModels() {
   elements.modelCards.innerHTML = models.map(model => `
     <article class="model-card ${model.name === state.selectedModel ? "selected" : ""}" data-model="${model.name}">
@@ -179,13 +324,20 @@ function confirmParameters() {
   state.confirmed = true;
   elements.solution.classList.remove("locked");
   renderModels();
+  renderRules();
   updatePipeline(2);
   elements.solution.scrollIntoView({ behavior: "smooth", block: "start" });
   toast("参数已锁定，规则引擎已生成候选方案");
 }
 
 function chooseModel(model) {
+  if (state.ruleBlocked) {
+    elements.ruleAlert.scrollIntoView({ behavior: "smooth", block: "center" });
+    toast("演示规则已拦截当前参数，请先应用建议或调整输入");
+    return;
+  }
   state.selectedModel = model;
+  state.modelChosen = true;
   renderModels();
   elements.drawing.classList.remove("locked");
   $("#chosenModel").textContent = model;
@@ -214,6 +366,22 @@ function dimension(svg, x1, y1, x2, y2, label, vertical = false) {
   svg.appendChild(svgEl("text", { x: (x1 + x2) / 2 + (vertical ? 17 : 0), y: (y1 + y2) / 2 + (vertical ? 4 : -8), "font-size": 12, fill: "#17212b", "text-anchor": "middle", transform: vertical ? `rotate(-90 ${(x1+x2)/2+17} ${(y1+y2)/2+4})` : "" }, label));
 }
 
+function renderBom() {
+  const circuits = Math.max(1, Math.min(24, Number(elements.circuits.value) || 1));
+  const current = Number(elements.current.value) || 0;
+  const items = [
+    ["主进线断路器", `${current}A 级别`, "1", "待选型"],
+    ["出线断路器", "规格待回路复核", String(circuits), "待复核"],
+    ["主母排组件", "截面待工程计算", "1套", "待计算"],
+    ["多功能仪表", "企业标准配置", "1", "示例"],
+    ["柜体及门板", `${state.selectedModel} · ${$("#cabinetWidth").value}mm宽`, "1套", "已匹配"],
+    ["端子与安装附件", "按回路配置", "1批", "示例"]
+  ];
+  $("#bomTypeCount").textContent = items.length;
+  $("#bomList").innerHTML = items.map(([name, spec, qty, status], index) => `
+    <div class="bom-item"><b>${String(index + 1).padStart(2, "0")}</b><p><strong>${name}</strong><small>${spec}</small></p><span>${qty}</span><i>${status}</i></div>`).join("");
+}
+
 function updateDrawing() {
   const svg = elements.drawingSvg;
   svg.innerHTML = "";
@@ -226,6 +394,12 @@ function updateDrawing() {
   $("#depthOut").textContent = `${d} mm`;
   $("#chosenCircuits").textContent = circuits;
   $("#chosenIp").textContent = elements.ip.value.toUpperCase();
+  $("#titleProject").textContent = scenarios[state.scenario].name;
+  $("#drawingTitle").textContent = `${state.selectedModel} 低压配电柜 初步方案`;
+  $("#titleDesigner").textContent = "AI Agent v0.3";
+  $("#titleVersion").textContent = "V0.3";
+  $("#drawingNumber").textContent = `DEMO-${state.scenario.toUpperCase()}-${state.selectedModel}-001`;
+  renderBom();
 
   const defs = svgEl("defs");
   const pattern = svgEl("pattern", { id: "hatch", width: 8, height: 8, patternUnits: "userSpaceOnUse", patternTransform: "rotate(45)" });
@@ -238,6 +412,7 @@ function updateDrawing() {
   if (state.view === "front") drawFront(svg, w, h, circuits);
   if (state.view === "side") drawSide(svg, d, h);
   if (state.view === "layout") drawLayout(svg, w, h, circuits);
+  if (state.confirmed) renderRules();
 }
 
 function drawFront(svg, width, height, circuits) {
@@ -314,7 +489,9 @@ function exportJson() {
     demo: true, warning: "演示数据，不可用于工程生产", project: scenarios[state.scenario].name,
     requirement: { voltage_v: +elements.voltage.value, current_a: +elements.current.value, circuits: +elements.circuits.value, ip_level: elements.ip.value, environment: state.environment },
     selected_model: state.selectedModel,
-    cabinet_mm: { width: +$("#cabinetWidth").value, height: +$("#cabinetHeight").value, depth: +$("#cabinetDepth").value }
+    cabinet_mm: { width: +$("#cabinetWidth").value, height: +$("#cabinetHeight").value, depth: +$("#cabinetDepth").value },
+    human_confirmations: Object.values(state.resolutions),
+    drawing_meta: { version: "V0.3", designer: "AI Agent v0.3", status: "待工程师审核" }
   };
   download(`E-CABINET_${state.selectedModel}_demo.json`, JSON.stringify(payload, null, 2), "application/json");
   toast("演示参数 JSON 已导出");
@@ -330,9 +507,33 @@ function exportDxf() {
   toast("演示 DXF 已导出：仅含柜体轮廓，不含工程计算");
 }
 
+function applyRuleSuggestion() {
+  const result = evaluateRules();
+  if (result.highCurrentBlock) $("#cabinetWidth").value = 1200;
+  if (result.circuitBlock && Number($("#cabinetWidth").value) < 1000) $("#cabinetWidth").value = 1000;
+  updateDrawing();
+  renderRules();
+  toast("已应用演示建议柜宽，实际尺寸仍需工程师复核");
+}
+
+function toggleCadMode() {
+  state.cadDark = !state.cadDark;
+  $("#drawingSheet").classList.toggle("cad-dark", state.cadDark);
+  $("#cadModeToggle").classList.toggle("active", state.cadDark);
+  $("#cadModeToggle").lastChild.textContent = state.cadDark ? " 工程白底" : " CAD 黑底";
+  toast(state.cadDark ? "已切换为 CAD 经典黑底模式" : "已切换为工程图纸白底模式");
+}
+
 elements.scenario.addEventListener("change", e => setScenario(e.target.value));
 elements.analyze.addEventListener("click", startAnalysis);
 $("#confirmButton").addEventListener("click", confirmParameters);
+$("#triggerRuleDemo").addEventListener("click", () => {
+  elements.current.value = 4000;
+  if (state.analyzed) renderAnalysis();
+  updateDrawing();
+  toast("已填入 4000A 演示参数，解析后可查看规则拦截效果");
+});
+$("#applyRuleSuggestion").addEventListener("click", applyRuleSuggestion);
 $("#toggleSources").addEventListener("click", () => { sourceVisible = !sourceVisible; elements.paramList.classList.toggle("show-sources", sourceVisible); $("#toggleSources").textContent = sourceVisible ? "隐藏原文定位" : "显示原文定位"; });
 
 $$(".segmented button").forEach(btn => btn.addEventListener("click", () => {
@@ -341,8 +542,18 @@ $$(".segmented button").forEach(btn => btn.addEventListener("click", () => {
   if (state.analyzed) renderAnalysis();
 }));
 
-[$("#cabinetWidth"), $("#cabinetHeight"), $("#cabinetDepth"), elements.circuits, elements.ip].forEach(input => input.addEventListener("input", updateDrawing));
+[$("#cabinetWidth"), $("#cabinetHeight"), $("#cabinetDepth"), elements.current, elements.circuits, elements.ip].forEach(input => input.addEventListener("input", () => {
+  updateDrawing();
+  if (state.analyzed && [elements.current, elements.circuits, elements.ip].includes(input)) renderAnalysis();
+}));
 $$(".view-tabs button").forEach(btn => btn.addEventListener("click", () => { state.view = btn.dataset.view; $$(".view-tabs button").forEach(item => item.classList.toggle("active", item === btn)); updateDrawing(); }));
+$$("[data-property-tab]").forEach(btn => btn.addEventListener("click", () => {
+  const tab = btn.dataset.propertyTab;
+  $$("[data-property-tab]").forEach(item => item.classList.toggle("active", item === btn));
+  $("#designProperties").classList.toggle("hidden", tab !== "design");
+  $("#bomProperties").classList.toggle("hidden", tab !== "bom");
+}));
+$("#cadModeToggle").addEventListener("click", toggleCadMode);
 $$(".pipeline-step").forEach(step => step.addEventListener("click", () => { const target = $("#" + step.dataset.jump); if (target) target.scrollIntoView({ behavior: "smooth", block: "start" }); }));
 
 const fileInput = $("#fileInput");
@@ -363,6 +574,11 @@ const help = $("#helpDialog");
 $("#helpButton").addEventListener("click", () => help.showModal());
 $("#closeHelp").addEventListener("click", () => help.close());
 $("#understood").addEventListener("click", () => help.close());
+
+const resolutionDialog = $("#resolutionDialog");
+$("#closeResolution").addEventListener("click", () => resolutionDialog.close());
+$("#cancelResolution").addEventListener("click", () => resolutionDialog.close());
+$("#saveResolution").addEventListener("click", saveResolution);
 
 renderModels();
 setScenario("water");

@@ -25,7 +25,7 @@
   <main id="top">
     <section class="hero">
       <div>
-        <div class="eyebrow">CONCEPT PROTOTYPE <span>V0.2</span></div>
+        <div class="eyebrow">CONCEPT PROTOTYPE <span>V0.3</span></div>
         <h1>工程配电柜<br><em>AI 设计智能体</em></h1>
         <p>把散落在图纸、参数表和技术要求中的信息，转化为可核验、可追溯、可出图的工程设计输入。</p>
       </div>
@@ -78,6 +78,7 @@
           <label><span>出线回路</span><div><input id="circuits" type="number" min="1" max="24" value="8" /><i>路</i></div></label>
           <label><span>防护等级</span><div><input id="ipLevel" type="text" value="IP31" /><i></i></div></label>
         </div>
+        <button class="demo-rule-trigger" id="triggerRuleDemo"><span>体验规则拦截</span><small>一键填入 4000A 演示参数</small></button>
 
         <label class="field-label" for="environment">安装环境</label>
         <div class="segmented" id="environment">
@@ -114,6 +115,15 @@
           </div>
           <h3>准备解析工程需求</h3>
           <p>系统将识别关键参数、定位原文依据，并把需要工程师判断的内容单独列出。</p>
+          <div class="parse-progress" id="parseProgress" aria-live="polite">
+            <div class="progress-track"><span id="parseProgressBar"></span></div>
+            <ol>
+              <li data-parse-step="0"><b>01</b><span>文档预处理</span><i>等待</i></li>
+              <li data-parse-step="1"><b>02</b><span>OCR文字识别</span><i>等待</i></li>
+              <li data-parse-step="2"><b>03</b><span>工程参数提取</span><i>等待</i></li>
+              <li data-parse-step="3"><b>04</b><span>演示规则检查</span><i>等待</i></li>
+            </ol>
+          </div>
         </div>
 
         <div class="analysis-content hidden" id="analysisContent">
@@ -150,17 +160,16 @@
         <p>匹配度表示与当前输入及企业案例的接近程度，不等于工程合规结论。</p>
       </div>
       <div class="lock-overlay"><span>完成需求确认后解锁</span></div>
+      <div class="rule-alert hidden" id="ruleAlert">
+        <div><span class="rule-alert-icon">!</span><p><strong>演示规则已拦截当前方案</strong><small id="ruleAlertText"></small></p></div>
+        <button id="applyRuleSuggestion">应用演示建议参数</button>
+      </div>
       <div class="solution-layout">
         <div class="model-cards" id="modelCards"></div>
-        <article class="rule-panel">
+        <article class="rule-panel" id="rulePanel">
           <div class="card-head"><h3>规则校验</h3><span class="rule-version">规则库 V2.4</span></div>
-          <div class="rule-ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="48"/><circle class="progress" cx="60" cy="60" r="48"/></svg><strong>18<small>/20</small></strong></div>
-          <ul class="rule-list">
-            <li><span class="pass">✓</span><p>额定参数与候选柜型范围匹配<small>R-ELEC-012</small></p></li>
-            <li><span class="pass">✓</span><p>柜体宽度满足安装空间约束<small>R-MECH-008</small></p></li>
-            <li><span class="pending">!</span><p>母排规格需由工程师复核<small>R-BUS-003</small></p></li>
-            <li><span class="pending">!</span><p>短路耐受参数尚未提供<small>R-SAFE-006</small></p></li>
-          </ul>
+          <div class="rule-ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="48"/><circle class="progress" cx="60" cy="60" r="48"/></svg><strong id="ruleScore">18<small>/20</small></strong></div>
+          <ul class="rule-list" id="ruleList"></ul>
         </article>
       </div>
     </section>
@@ -183,31 +192,46 @@
               <button data-view="side">侧视图</button>
               <button data-view="layout">柜内布局</button>
             </div>
-            <div class="zoom-label">1 : 10 <span>·</span> A3</div>
+            <div class="drawing-toolbar-right">
+              <button class="cad-mode-toggle" id="cadModeToggle"><span></span> CAD 黑底</button>
+              <div class="zoom-label">1 : 10 <span>·</span> A3</div>
+            </div>
           </div>
           <div class="sheet" id="drawingSheet">
             <div class="sheet-grid"></div>
             <svg id="cabinetDrawing" viewBox="0 0 900 560" role="img" aria-label="配电柜参数化工程图"></svg>
             <div class="title-block">
-              <div><strong>工程配电柜 AI 设计智能体</strong><span id="drawingTitle">GGD 低压配电柜 初步方案</span></div>
-              <div><span>阶段</span><b>概念验证</b></div>
-              <div><span>图号</span><b>DEMO-001</b></div>
+              <div><strong id="titleProject">城北水厂低压配电改造</strong><span id="drawingTitle">GGD 低压配电柜 初步方案</span></div>
+              <div><span>设计</span><b id="titleDesigner">AI Agent</b></div>
+              <div><span>版本</span><b id="titleVersion">V0.3</b></div>
+              <div><span>图号</span><b id="drawingNumber">DEMO-WATER-GGD-001</b></div>
             </div>
           </div>
         </div>
         <aside class="property-panel">
           <div class="card-head"><h3>设计参数</h3><span class="live-tag">实时联动</span></div>
-          <label><span>柜体宽度 W</span><div><input id="cabinetWidth" type="range" min="600" max="1200" step="50" value="800"/><output id="widthOut">800 mm</output></div></label>
-          <label><span>柜体高度 H</span><div><input id="cabinetHeight" type="range" min="1800" max="2400" step="100" value="2200"/><output id="heightOut">2200 mm</output></div></label>
-          <label><span>柜体深度 D</span><div><input id="cabinetDepth" type="range" min="600" max="1200" step="50" value="800"/><output id="depthOut">800 mm</output></div></label>
-          <div class="property-stats">
-            <div><span>方案型号</span><strong id="chosenModel">GGD</strong></div>
-            <div><span>回路数量</span><strong id="chosenCircuits">8</strong></div>
-            <div><span>防护等级</span><strong id="chosenIp">IP31</strong></div>
+          <div class="property-tabs" role="tablist">
+            <button class="active" data-property-tab="design">设计参数</button>
+            <button data-property-tab="bom">示例 BOM</button>
           </div>
-          <div class="revision-note">
-            <span>版本 01</span>
-            <p>该图仅验证交互和参数化出图思路，不含真实电气计算结果。</p>
+          <div class="property-view" id="designProperties">
+            <label><span>柜体宽度 W</span><div><input id="cabinetWidth" type="range" min="600" max="1200" step="50" value="800"/><output id="widthOut">800 mm</output></div></label>
+            <label><span>柜体高度 H</span><div><input id="cabinetHeight" type="range" min="1800" max="2400" step="100" value="2200"/><output id="heightOut">2200 mm</output></div></label>
+            <label><span>柜体深度 D</span><div><input id="cabinetDepth" type="range" min="600" max="1200" step="50" value="800"/><output id="depthOut">800 mm</output></div></label>
+            <div class="property-stats">
+              <div><span>方案型号</span><strong id="chosenModel">GGD</strong></div>
+              <div><span>回路数量</span><strong id="chosenCircuits">8</strong></div>
+              <div><span>防护等级</span><strong id="chosenIp">IP31</strong></div>
+            </div>
+            <div class="revision-note">
+              <span>版本 V0.3</span>
+              <p>该图仅验证交互和参数化出图思路，不含真实电气计算结果。</p>
+            </div>
+          </div>
+          <div class="property-view hidden" id="bomProperties">
+            <div class="bom-summary"><span>物料种类</span><strong id="bomTypeCount">6</strong><small>示例结构</small></div>
+            <div class="bom-list" id="bomList"></div>
+            <p class="bom-disclaimer">示例 BOM 未接入真实元器件与价格库，不作为采购或报价依据。</p>
           </div>
         </aside>
       </div>
@@ -230,6 +254,26 @@
       <li><b>下一步：</b>接入客户样本、规则表和CAD模板后升级为PoC。</li>
     </ul>
     <button class="primary-action" id="understood">我知道了</button>
+  </dialog>
+
+  <dialog id="resolutionDialog" class="resolution-dialog">
+    <button class="dialog-close" id="closeResolution" aria-label="关闭">×</button>
+    <span class="kicker">HUMAN IN THE LOOP</span>
+    <h2 id="resolutionTitle">处理待确认项</h2>
+    <p id="resolutionDescription"></p>
+    <input type="hidden" id="resolutionIssueIndex" />
+    <label class="dialog-field"><span>处理方式</span>
+      <select id="resolutionMethod">
+        <option value="manual">补充参数并确认</option>
+        <option value="temporary">采用项目暂定值 仅演示</option>
+        <option value="defer">转交工程师稍后确认</option>
+      </select>
+    </label>
+    <label class="dialog-field"><span>补充值或确认说明</span>
+      <textarea id="resolutionValue" rows="4" placeholder="例如：额定短时耐受电流 50kA 1s，仅作演示输入"></textarea>
+    </label>
+    <p class="dialog-warning">这里记录的是演示确认结果，不代表行业规范或生产设计结论。</p>
+    <div class="dialog-actions"><button class="secondary-btn" id="cancelResolution">取消</button><button class="primary-small" id="saveResolution">保存处理结果</button></div>
   </dialog>
 
   <div class="toast" id="toast" role="status"></div>
