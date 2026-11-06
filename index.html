@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0b1220" />
+  <title>工程配电柜 AI 设计智能体 Demo</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%230b1220'/%3E%3Cpath d='M13 14h11v36H13zm14 0h11v36H27zm14 0h10v36H41z' fill='none' stroke='%23c8f54a' stroke-width='4'/%3E%3Cpath d='M27 14h11v36H27z' fill='%23c8f54a'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="grain" aria-hidden="true"></div>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="返回顶部">
+      <span class="brand-mark"><i></i><i></i><i></i></span>
+      <span><strong>E-CABINET</strong><small>ENGINEERING COPILOT</small></span>
+    </a>
+    <div class="topbar-right">
+      <span class="security"><span class="pulse"></span> 本地项目空间</span>
+      <button class="icon-btn" id="helpButton" aria-label="查看说明">?</button>
+      <div class="avatar">YX</div>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div>
+        <div class="eyebrow">CONCEPT PROTOTYPE <span>V0.1</span></div>
+        <h1>工程配电柜<br><em>AI 设计智能体</em></h1>
+        <p>把散落在图纸、参数表和技术要求中的信息，转化为可核验、可追溯、可出图的工程设计输入。</p>
+      </div>
+      <div class="hero-status">
+        <span>当前项目</span>
+        <strong id="projectName">城北水厂低压配电改造</strong>
+        <small>演示数据 · 非生产设计依据</small>
+      </div>
+    </section>
+
+    <nav class="pipeline" aria-label="设计流程">
+      <button class="pipeline-step active" data-jump="intake"><b>01</b><span>需求录入<small>多格式资料</small></span></button>
+      <span class="pipe-line"></span>
+      <button class="pipeline-step" data-jump="analysis"><b>02</b><span>智能解析<small>参数与冲突</small></span></button>
+      <span class="pipe-line"></span>
+      <button class="pipeline-step" data-jump="solution"><b>03</b><span>方案设计<small>选型与规则</small></span></button>
+      <span class="pipe-line"></span>
+      <button class="pipeline-step" data-jump="drawing"><b>04</b><span>图纸生成<small>预览与导出</small></span></button>
+    </nav>
+
+    <section class="workspace" id="intake">
+      <aside class="control-panel">
+        <div class="panel-heading">
+          <span class="section-index">01</span>
+          <div><h2>需求输入</h2><p>选择样例或调整关键参数</p></div>
+        </div>
+
+        <label class="field-label" for="scenario">演示场景</label>
+        <div class="select-wrap">
+          <select id="scenario">
+            <option value="water">城北水厂低压配电改造</option>
+            <option value="factory">精密制造车间动力柜</option>
+            <option value="outdoor">户外泵站控制配电箱</option>
+          </select>
+        </div>
+
+        <div class="upload-card" id="dropZone" tabindex="0" role="button" aria-label="上传需求文件">
+          <input type="file" id="fileInput" accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" hidden />
+          <div class="upload-icon">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v4.5A1.5 1.5 0 006.5 20h11a1.5 1.5 0 001.5-1.5V14"/></svg>
+          </div>
+          <strong id="fileName">城北水厂_低压配电技术要求.pdf</strong>
+          <span id="fileMeta">PDF · 18页 · 4.8 MB</span>
+          <small>点击替换文件</small>
+        </div>
+
+        <div class="compact-grid">
+          <label><span>额定电压</span><div><input id="voltage" type="number" value="400" /><i>V</i></div></label>
+          <label><span>额定电流</span><div><input id="current" type="number" value="1600" /><i>A</i></div></label>
+          <label><span>出线回路</span><div><input id="circuits" type="number" min="1" max="24" value="8" /><i>路</i></div></label>
+          <label><span>防护等级</span><div><input id="ipLevel" type="text" value="IP31" /><i></i></div></label>
+        </div>
+
+        <label class="field-label" for="environment">安装环境</label>
+        <div class="segmented" id="environment">
+          <button class="active" data-value="户内">户内</button>
+          <button data-value="户外">户外</button>
+          <button data-value="防腐">防腐</button>
+        </div>
+
+        <button class="primary-action" id="analyzeButton">
+          <span>开始智能解析</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14m-5-5l5 5-5 5"/></svg>
+        </button>
+        <p class="privacy-note"><span>◆</span> 演示中所有处理均在浏览器本地完成</p>
+      </aside>
+
+      <div class="main-panel">
+        <div class="stage-head">
+          <div>
+            <span class="kicker">AI REQUIREMENT PARSER</span>
+            <h2>需求解析工作台</h2>
+          </div>
+          <div class="run-state" id="runState"><span></span> 等待解析</div>
+        </div>
+
+        <div class="empty-state" id="emptyState">
+          <div class="scan-visual">
+            <span class="scan-line"></span>
+            <svg viewBox="0 0 160 120" aria-hidden="true">
+              <rect x="28" y="14" width="104" height="92" rx="6"/>
+              <path d="M45 35h42M45 49h70M45 63h52M45 77h62"/>
+              <circle cx="112" cy="88" r="18"/>
+              <path d="M125 101l13 13M104 88l5 5 10-11"/>
+            </svg>
+          </div>
+          <h3>准备解析工程需求</h3>
+          <p>系统将识别关键参数、定位原文依据，并把需要工程师判断的内容单独列出。</p>
+        </div>
+
+        <div class="analysis-content hidden" id="analysisContent">
+          <div class="metric-row">
+            <div><span>识别参数</span><strong>14<small>项</small></strong><i class="good">完整 86%</i></div>
+            <div><span>原文依据</span><strong>12<small>处</small></strong><i class="good">可追溯</i></div>
+            <div><span>待确认</span><strong id="issueCount">2<small>项</small></strong><i class="warn">需人工判断</i></div>
+            <div><span>综合置信度</span><strong>93<small>%</small></strong><i class="good">高</i></div>
+          </div>
+
+          <div class="analysis-grid" id="analysis">
+            <article class="card extracted-card">
+              <div class="card-head"><h3>已提取参数</h3><button class="text-btn" id="toggleSources">显示原文定位</button></div>
+              <div class="param-list" id="paramList"></div>
+            </article>
+
+            <article class="card issue-card">
+              <div class="card-head"><h3>冲突与缺失</h3><span class="count-badge">2</span></div>
+              <div id="issues"></div>
+            </article>
+          </div>
+
+          <div class="confirm-bar">
+            <div><span class="confirm-icon">✓</span><p><strong>进入工程设计前确认</strong><small>当前参数仅来自AI解析，确认后才会送入规则引擎。</small></p></div>
+            <button id="confirmButton">确认并生成方案</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="solution-section locked" id="solution">
+      <div class="section-title">
+        <div><span class="section-index">02</span><div><span class="kicker">RULE ENGINE + CONSTRAINT SOLVER</span><h2>工程方案推荐</h2></div></div>
+        <p>匹配度表示与当前输入及企业案例的接近程度，不等于工程合规结论。</p>
+      </div>
+      <div class="lock-overlay"><span>完成需求确认后解锁</span></div>
+      <div class="solution-layout">
+        <div class="model-cards" id="modelCards"></div>
+        <article class="rule-panel">
+          <div class="card-head"><h3>规则校验</h3><span class="rule-version">规则库 V2.4</span></div>
+          <div class="rule-ring"><svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="48"/><circle class="progress" cx="60" cy="60" r="48"/></svg><strong>18<small>/20</small></strong></div>
+          <ul class="rule-list">
+            <li><span class="pass">✓</span><p>额定参数与候选柜型范围匹配<small>R-ELEC-012</small></p></li>
+            <li><span class="pass">✓</span><p>柜体宽度满足安装空间约束<small>R-MECH-008</small></p></li>
+            <li><span class="pending">!</span><p>母排规格需由工程师复核<small>R-BUS-003</small></p></li>
+            <li><span class="pending">!</span><p>短路耐受参数尚未提供<small>R-SAFE-006</small></p></li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="drawing-section locked" id="drawing">
+      <div class="lock-overlay"><span>选择方案后解锁</span></div>
+      <div class="section-title">
+        <div><span class="section-index">03</span><div><span class="kicker">PARAMETRIC DRAWING</span><h2>参数化图纸预览</h2></div></div>
+        <div class="drawing-actions">
+          <button class="secondary-btn" id="downloadJson">导出参数 JSON</button>
+          <button class="secondary-btn" id="downloadDxf">导出演示 DXF</button>
+          <button class="primary-small" id="printPdf">打印为 PDF</button>
+        </div>
+      </div>
+      <div class="drawing-workspace">
+        <div class="drawing-canvas">
+          <div class="drawing-toolbar">
+            <div class="view-tabs">
+              <button class="active" data-view="front">正视图</button>
+              <button data-view="side">侧视图</button>
+              <button data-view="layout">柜内布局</button>
+            </div>
+            <div class="zoom-label">1 : 10 <span>·</span> A3</div>
+          </div>
+          <div class="sheet" id="drawingSheet">
+            <div class="sheet-grid"></div>
+            <svg id="cabinetDrawing" viewBox="0 0 900 560" role="img" aria-label="配电柜参数化工程图"></svg>
+            <div class="title-block">
+              <div><strong>工程配电柜 AI 设计智能体</strong><span id="drawingTitle">GGD 低压配电柜 初步方案</span></div>
+              <div><span>阶段</span><b>概念验证</b></div>
+              <div><span>图号</span><b>DEMO-001</b></div>
+            </div>
+          </div>
+        </div>
+        <aside class="property-panel">
+          <div class="card-head"><h3>设计参数</h3><span class="live-tag">实时联动</span></div>
+          <label><span>柜体宽度 W</span><div><input id="cabinetWidth" type="range" min="600" max="1200" step="50" value="800"/><output id="widthOut">800 mm</output></div></label>
+          <label><span>柜体高度 H</span><div><input id="cabinetHeight" type="range" min="1800" max="2400" step="100" value="2200"/><output id="heightOut">2200 mm</output></div></label>
+          <label><span>柜体深度 D</span><div><input id="cabinetDepth" type="range" min="600" max="1200" step="50" value="800"/><output id="depthOut">800 mm</output></div></label>
+          <div class="property-stats">
+            <div><span>方案型号</span><strong id="chosenModel">GGD</strong></div>
+            <div><span>回路数量</span><strong id="chosenCircuits">8</strong></div>
+            <div><span>防护等级</span><strong id="chosenIp">IP31</strong></div>
+          </div>
+          <div class="revision-note">
+            <span>版本 01</span>
+            <p>该图仅验证交互和参数化出图思路，不含真实电气计算结果。</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <footer>
+      <div><strong>E-CABINET</strong><span>工程设计，从可解释开始。</span></div>
+      <p>Concept Demo · 数据与规则均为演示用途</p>
+    </footer>
+  </main>
+
+  <dialog id="helpDialog">
+    <button class="dialog-close" id="closeHelp" aria-label="关闭">×</button>
+    <span class="kicker">DEMO BOUNDARY</span>
+    <h2>这版 Demo 展示什么</h2>
+    <p>它展示产品流程、交互方式和参数化图纸联动，用于与客户确认方向。当前没有连接真实OCR、大模型、企业规则库或CAD内核，因此结果不能用于工程生产。</p>
+    <ul>
+      <li><b>真实交互：</b>参数编辑、流程推进、方案选择、图纸联动和文件下载。</li>
+      <li><b>演示模拟：</b>AI置信度、型号匹配度、规则结论和电气参数。</li>
+      <li><b>下一步：</b>接入客户样本、规则表和CAD模板后升级为PoC。</li>
+    </ul>
+    <button class="primary-action" id="understood">我知道了</button>
+  </dialog>
+
+  <div class="toast" id="toast" role="status"></div>
+  <script src="./app.js"></script>
+</body>
+</html>
