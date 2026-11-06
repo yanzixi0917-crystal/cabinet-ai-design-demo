@@ -289,3 +289,220 @@ dialog li b { color: var(--ink); }
   .drawing-section { display: block !important; }
   .sheet { width: 100vw; max-height: none; box-shadow: none; }
 }
+
+/* V0.2 readability and spacing pass */
+:root {
+  --font-micro: 11px;
+  --font-label: 13px;
+  --font-body: 15px;
+  --font-subtitle: 18px;
+  --font-section: 30px;
+}
+
+body {
+  font-size: var(--font-body);
+  line-height: 1.65;
+}
+
+.topbar {
+  height: 78px;
+  padding-inline: clamp(24px, 5vw, 82px);
+}
+.brand { gap: 14px; }
+.brand-mark { width: 38px; height: 38px; }
+.brand strong { font-size: 15px; }
+.brand small { font-size: 9px; margin-top: 3px; }
+.security { font-size: 13px; }
+.icon-btn, .avatar { width: 36px; height: 36px; font-size: 12px; }
+
+.hero {
+  min-height: 360px;
+  padding: 62px clamp(28px, 7vw, 118px) 74px;
+}
+.eyebrow, .kicker { font-size: 11px; line-height: 1.4; }
+.hero h1 {
+  font-size: clamp(46px, 5vw, 68px);
+  line-height: 1.02;
+  margin: 22px 0 24px;
+}
+.hero p {
+  max-width: 650px;
+  font-size: 17px;
+  line-height: 1.8;
+}
+.hero-status {
+  width: 320px;
+  padding: 22px 0 8px 28px;
+}
+.hero-status span, .hero-status small { font-size: 12px; }
+.hero-status strong { font-size: 19px; margin: 10px 0; }
+
+.pipeline {
+  padding: 22px clamp(28px, 7vw, 118px);
+}
+.pipeline-step { gap: 12px; }
+.pipeline-step b { width: 36px; height: 36px; font-size: 11px; }
+.pipeline-step span { font-size: 14px; line-height: 1.3; }
+.pipeline-step small { font-size: 11px; margin-top: 4px; }
+.pipe-line { margin-inline: 28px; }
+
+.workspace {
+  max-width: 1560px;
+  min-height: 780px;
+  grid-template-columns: 400px minmax(0, 1fr);
+}
+.control-panel { padding: 44px 36px; }
+.panel-heading { gap: 18px; margin-bottom: 34px; }
+.section-index { width: 42px; height: 42px; font-size: 12px; }
+.panel-heading h2, .section-title h2 { font-size: 26px; line-height: 1.25; }
+.panel-heading p { margin-top: 7px; font-size: 13px; line-height: 1.5; }
+.field-label { font-size: 13px; margin: 25px 0 10px; }
+select { padding: 13px 40px 13px 14px; font-size: 14px; }
+.select-wrap::after { right: 15px; top: 12px; }
+.upload-card { margin: 22px 0; padding: 25px 18px; }
+.upload-icon { width: 42px; height: 42px; margin-bottom: 12px; }
+.upload-icon svg { width: 21px; }
+.upload-card strong { font-size: 13px; }
+.upload-card span { font-size: 11px; margin: 7px 0 10px; }
+.upload-card small { font-size: 11px; }
+.compact-grid { gap: 15px; }
+.compact-grid label > span { font-size: 12px; margin-bottom: 7px; }
+.compact-grid input { padding: 12px; font-size: 15px; }
+.compact-grid i { font-size: 11px; padding-right: 11px; }
+.segmented button { padding: 12px 8px; font-size: 13px; }
+.primary-action { margin-top: 28px; padding: 16px 18px; font-size: 15px; }
+.primary-action svg { width: 19px; }
+.privacy-note { margin-top: 12px; font-size: 10px; }
+
+.main-panel { padding: 46px clamp(36px, 4vw, 68px); }
+.stage-head { padding-bottom: 28px; }
+.stage-head h2 { margin-top: 9px; font-size: 30px; }
+.run-state { padding: 9px 12px; font-size: 12px; }
+.empty-state { min-height: 560px; }
+.empty-state h3 { font-size: 22px; margin: 18px 0 8px; }
+.empty-state p { max-width: 520px; font-size: 14px; line-height: 1.8; }
+.scan-visual { width: 210px; height: 160px; }
+.scan-visual svg { width: 180px; height: 135px; margin: 12px 15px; }
+
+.metric-row { margin: 28px 0 22px; }
+.metric-row > div { padding: 20px; }
+.metric-row span { font-size: 12px; }
+.metric-row strong { margin: 7px 0; font-size: 32px; line-height: 1.1; }
+.metric-row strong small { font-size: 12px; }
+.metric-row i { font-size: 11px; }
+.analysis-grid { gap: 22px; }
+.card-head { padding: 18px 20px; }
+.card-head h3 { font-size: 15px; }
+.text-btn { font-size: 11px; }
+.param-list { padding: 9px 20px 15px; }
+.param-item {
+  grid-template-columns: 130px minmax(0, 1fr) 72px;
+  gap: 12px;
+  padding: 13px 0;
+  font-size: 13px;
+}
+.param-item strong { font-size: 14px; }
+.confidence { font-size: 11px; }
+.source-line { padding: 10px 12px; font-size: 11px; line-height: 1.65; }
+.count-badge { width: 24px; height: 24px; font-size: 11px; }
+.issue { padding: 18px 20px; gap: 13px; }
+.issue-mark { width: 28px; height: 28px; font-size: 13px; }
+.issue p { font-size: 13px; line-height: 1.6; }
+.issue p small { margin-top: 6px; font-size: 12px; line-height: 1.65; }
+.issue button { margin-top: 10px; padding: 7px 10px; font-size: 10px; }
+.confirm-bar { margin-top: 22px; padding: 18px 20px; }
+.confirm-icon { width: 32px; height: 32px; }
+.confirm-bar p { font-size: 13px; }
+.confirm-bar small { margin-top: 5px; font-size: 11px; }
+.confirm-bar button { padding: 11px 16px; font-size: 12px; }
+
+.solution-section, .drawing-section {
+  max-width: 1560px;
+  padding: 78px clamp(28px, 7vw, 118px);
+}
+.section-title { margin-bottom: 34px; }
+.section-title > div:first-child { gap: 18px; }
+.section-title h2 { font-size: var(--font-section); }
+.section-title .kicker { margin-bottom: 8px; }
+.section-title p { max-width: 460px; font-size: 12px; line-height: 1.75; }
+.lock-overlay span { padding: 13px 18px; font-size: 12px; }
+.solution-layout { grid-template-columns: minmax(0, 1fr) 360px; gap: 24px; }
+.model-cards { gap: 16px; }
+.model-card { padding: 26px; }
+.model-card.selected { padding: 25px; }
+.model-card.selected::after { padding: 7px 10px; font-size: 10px; }
+.model-score { width: 60px; height: 60px; font-size: 13px; }
+.model-card h3 { margin: 22px 0 6px; font-size: 30px; }
+.model-card > span { font-size: 12px; }
+.model-card ul { margin-top: 22px; }
+.model-card li { margin: 11px 0; padding-left: 15px; font-size: 12px; line-height: 1.55; }
+.model-card li::before { width: 5px; height: 5px; top: 7px; }
+.rule-version { font-size: 10px; }
+.rule-ring { width: 132px; height: 132px; margin-top: 26px; }
+.rule-ring strong { font-size: 28px; }
+.rule-ring small { font-size: 12px; }
+.rule-list { padding: 0 24px 22px; }
+.rule-list li { gap: 11px; padding: 13px 0; }
+.rule-list > li > span { width: 22px; height: 22px; font-size: 10px; }
+.rule-list p { font-size: 12px; line-height: 1.5; }
+.rule-list small { margin-top: 5px; font-size: 10px; }
+
+.drawing-actions { gap: 10px; }
+.secondary-btn, .primary-small { padding: 11px 14px; font-size: 12px; }
+.drawing-workspace { grid-template-columns: minmax(0, 1fr) 330px; }
+.drawing-canvas { padding: 18px; }
+.drawing-toolbar { margin-bottom: 15px; }
+.view-tabs button { padding: 9px 14px; font-size: 11px; }
+.zoom-label { font-size: 11px; }
+.property-panel { padding: 26px; }
+.live-tag { padding: 5px 8px; font-size: 10px; }
+.property-panel > label { margin: 25px 0; }
+.property-panel label > span { margin-bottom: 10px; font-size: 12px; }
+.property-panel label div { grid-template-columns: minmax(0, 1fr) 74px; gap: 12px; }
+output { font-size: 12px; }
+.property-stats { margin-top: 32px; }
+.property-stats > div { padding: 14px 0; font-size: 12px; }
+.revision-note { margin-top: 28px; padding-left: 14px; }
+.revision-note span { font-size: 11px; }
+.revision-note p { font-size: 11px; line-height: 1.75; }
+
+footer { padding: 36px clamp(28px, 7vw, 118px); }
+footer strong { font-size: 14px; }
+footer span, footer p { font-size: 11px; }
+
+dialog { max-width: 580px; padding: 40px; }
+dialog h2 { font-size: 30px; }
+dialog p, dialog li { font-size: 14px; line-height: 1.75; }
+.toast { padding: 13px 18px; font-size: 12px; }
+
+@media (max-width: 1180px) {
+  .workspace { grid-template-columns: 360px minmax(0, 1fr); }
+  .main-panel { padding-inline: 32px; }
+  .solution-layout { grid-template-columns: 1fr; }
+  .rule-panel { display: grid; grid-template-columns: 1fr 2fr; align-items: center; }
+  .rule-panel .card-head { grid-column: 1 / -1; }
+}
+
+@media (max-width: 760px) {
+  .topbar { height: 70px; padding-inline: 18px; }
+  .brand-mark { width: 34px; height: 34px; }
+  .hero { min-height: 420px; padding: 44px 26px 56px; }
+  .hero h1 { font-size: clamp(40px, 12vw, 52px); }
+  .hero p { font-size: 15px; }
+  .hero-status { width: 100%; padding-left: 22px; }
+  .pipeline { padding: 18px 26px; }
+  .pipeline-step span { font-size: 13px; }
+  .workspace { display: block; }
+  .control-panel { padding: 36px 26px; }
+  .main-panel { padding: 34px 24px; }
+  .stage-head h2 { font-size: 27px; }
+  .metric-row > div { padding: 17px; }
+  .metric-row strong { font-size: 28px; }
+  .param-item { grid-template-columns: 104px minmax(0, 1fr) 58px; gap: 8px; }
+  .solution-section, .drawing-section { padding: 56px 24px; }
+  .section-title h2 { font-size: 27px; }
+  .model-card { padding: 24px; }
+  .rule-panel { display: block; }
+  .drawing-workspace { grid-template-columns: 1fr; }
+  .property-panel { padding: 24px; }
+}
